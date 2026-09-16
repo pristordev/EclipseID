@@ -1,0 +1,82 @@
+<header class="navbar">
+    <a href="/" class="logo">
+        <span>ECLIPSE</span><span class="logo-accent">ID</span>
+    </a>
+
+    <button class="hamburger" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <div class="nav-links" id="navLinks">
+        <a href="/">Главная</a>
+        <a href="/about">О системе</a>
+        <a href="https://plieratech.gitbook.io/plierabook" target="_blank">WIKI</a>
+        <a href="/citizens">Граждане</a>
+        <a href="https://t.me/PlieraMedia" target="_blank">Новости</a>
+
+        <button class="mobile-search-btn" onclick="closeMenu(); toggleSearch()">
+            🔍 Поиск
+        </button>
+    </div>
+
+    <div class="search-bar desktop-only" onclick="toggleSearch()">
+        <span class="search-bar-icon">🔍</span>
+        <span class="search-bar-text">Поиск...</span>
+        <span class="search-bar-kbd">Ctrl+K</span>
+    </div>
+
+    <div class="nav-actions">
+        <button class="settings-btn" onclick="toggleSettings(event)" title="Настройки">
+    ⚙️
+</button>
+<div class="settings-wrap">
+<div class="settings-menu" id="settingsMenu">
+    <div class="settings-section">
+        <div class="settings-label">🎨 Тема</div>
+        <div class="settings-options">
+            <button class="settings-option" data-theme-set="dark" onclick="setTheme('dark')">
+                <span>🌙</span> Тёмная
+            </button>
+        </div>
+    </div>
+    <div class="settings-divider"></div>
+    <div class="settings-section">
+        <div class="settings-label">🎯 Акцент</div>
+        <div class="settings-colors">
+            <button class="settings-color" data-accent-set="mint"  onclick="setAccent('mint')"  style="background:#00d4aa" title="Мятный"></button>
+            <button class="settings-color" data-accent-set="blue"  onclick="setAccent('blue')"  style="background:#4a9eff" title="Синий"></button>
+            <button class="settings-color" data-accent-set="red"   onclick="setAccent('red')"   style="background:#ff4a4a" title="Красный"></button>
+            <button class="settings-color" data-accent-set="orange" onclick="setAccent('orange')" style="background:#ff9a3c" title="Оранжевый"></button>
+        </div>
+    </div>
+</div>
+  </div>
+        {% if current_user %}
+            <div class="avatar-menu-wrap">
+                <div class="avatar-btn" onclick="toggleAvatarMenu(event)">
+                    {% if avatar_url %}
+                        <img src="{{ avatar_url }}" alt="Avatar">
+                    {% else %}
+                        <span style="font-size: 22px;">👤</span>
+                    {% endif %}
+                </div>
+                <div class="avatar-menu" id="avatarMenu">
+                    <a href="/profile" class="avatar-menu-item">
+                        <span class="icon">👤</span> Профиль
+                    </a>
+                    <a href="#" class="avatar-menu-item" onclick="event.preventDefault(); alert('Скоро');">
+                        <span class="icon">🔗</span> Аккаунты
+                    </a>
+                    <div class="avatar-menu-divider"></div>
+                    <a href="/logout" class="avatar-menu-item danger">
+                        <span class="icon">🚪</span> Выйти
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <button class="btn btn-primary" onclick="window.location.href='/auth/discord'" style="padding: 8px 20px; font-size: 14px;">Войти</button>
+        {% endif %}
+    </divsettings-wrap>
+</header>

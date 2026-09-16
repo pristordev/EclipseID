@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Личный кабинет{% endblock %}
+
+{% block content %}
+
+<section class="profile-section">
+    <div style="max-width: 600px; margin: 0 auto; text-align: center;">
+
+        {% if avatar_url %}
+            <img src="{{ avatar_url }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 10%; margin-bottom: 20px;">
+        {% else %}
+            <div style="font-size: 80px; margin-bottom: 20px;">👤</div>
+        {% endif %}
+
+        <h1 style="font-size: 36px; color: #fff;">{{ user.username }}</h1>
+
+        <div style="display: flex; gap: 12px; justify-content: center; margin: 12px 0 8px; flex-wrap: wrap;">
+            <span class="badge" style="background: rgba(var(--accent-rgb), 0.12); color: var(--accent); border-color: rgba(var(--accent-rgb), 0.2); font-size: 12px;">
+                {{ main_role_display }}
+            </span>
+            <span class="badge" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.05);">
+                ⭐ {{ user.reputation }} репутации
+            </span>
+        </div>
+
+        {% if sorted_roles and sorted_roles|length > 1 %}
+        <div class="card" style="text-align: left; margin-top: 16px;">
+            <span style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">📋 Все роли</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                {% for role_id in sorted_roles %}
+                    <span class="role-tag {% if loop.first %}main-role{% endif %}">
+                        {% if loop.first %}⭐{% else %}▪{% endif %}
+                        {{ role_names[role_id] }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ================= ИСБ УДОСТОВЕРЕНИЕ ================= #}
+        {% if isb_employee and isb_employee.is_active %}
+        <div style="margin-top: 24px; text-align: left;">
+            <div class="card" style="
+                background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.05) 0%, rgba(var(--accent-rgb), 0.02) 100%);
+                border: 1px solid rgba(var(--accent-rgb), 0.15);
+                padding: 20px 24px;
+                position: relative;
+                overflow: hidden;
+            ">
+                <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent);"></div>
+
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <span style="font-size: 28px;">🛡️</span>
+                    <div>
+                        <div style="color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;">
+                            Имперская служба безопасности
+                        </div>
+                        <div style="color: #fff; font-size: 14px; font-weight: 600;">
+                            Служебное удостоверение
+                        </div>
+                    </div>
+                </div>
+
+                {% if rank_insignia_svg %}
+                <div style="display: flex; justify-content: center; align-items: center; margin: 16px 0 24px; padding: 20px 0; position: relative;">
+                    <img src="/static/img/isb_wreath.svg" alt="" style="position: absolute; width: 150px; height: 150px; opacity: 0.95; filter: drop-shadow(0 0 20px rgba(240,185,13,0.67)); z-index: 1;">
+                    <div style="position: relative; z-index: 5; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));">
+                        {{ rank_insignia_svg|safe }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                    <div>
+                        <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase;">Звание</div>
+                        <div style="color: #fff; font-weight: 600; font-size: 15px; margin-top: 2px;">{{ isb_employee.rank_name }}</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase;">Служебный номер</div>
+                        <div style="color: var(--accent); font-weight: 600; font-family: monospace; margin-top: 2px;">{{ isb_employee.service_number }}</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase;">Структура</div>
+                        <div style="color: #fff; margin-top: 2px;">
+                            {% if isb_employee.branch == 'army' %}⚔️ Вооружённые силы
+                            {% elif isb_employee.branch == 'fleet' %}🚀 Флот
+                            {% elif isb_employee.branch == 'intelligence' %}🕵️ Разведка
+                            {% elif isb_employee.branch == 'ideology' %}📢 Идеология
+                            {% elif isb_employee.branch == 'command' %}👑 Командование
+                            {% elif isb_employee.branch == 'cc' %}☄️ Центральный комитет
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase;">В службе с</div>
+                        <div style="color: #fff; margin-top: 2px;">{{ isb_employee.enlisted_at.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                    {% if isb_employee.position %}
+                    <div style="grid-column: span 2;">
+                        <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase;">Должность</div>
+                        <div style="color: #fff; margin-top: 2px;">{{ isb_employee.position }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if isb_employee.can_arrest or isb_employee.can_conduct_searches or isb_employee.can_issue_warrants %}
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(var(--accent-rgb), 0.1);">
+                    <div style="color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; margin-bottom: 8px;">Полномочия</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        {% if isb_employee.can_arrest %}<span class="role-tag">⚖️ Арест</span>{% endif %}
+                        {% if isb_employee.can_conduct_searches %}<span class="role-tag">🔍 Обыск</span>{% endif %}
+                        {% if isb_employee.can_issue_warrants %}<span class="role-tag">📜 Ордера</span>{% endif %}
+                        {% if isb_employee.can_command %}<span class="role-tag">🎖 Командование</span>{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ================= НАГРАДЫ ================= #}
+        {% if isb_employee and isb_employee.is_active and isb_awards %}
+        <div class="awards-section">
+            <div class="awards-header">
+                <h3>🏅 Награды ИСБ</h3>
+                <span class="count">{{ isb_awards|length }} шт.</span>
+            </div>
+
+            <div class="awards-grid">
+                {% for item in isb_awards %}
+                <div class="award-slot rarity-{{ item.award.rarity }}"
+                     onclick="openAwardModal(
+                        '{{ item.award.icon|e }}',
+                        '{{ item.award.display_name|e }}',
+                        '{{ item.award.rarity|e }}',
+                        '{{ item.award.description|e }}',
+                        '{{ item.grant.granted_at.strftime("%d.%m.%Y") }}',
+                        '{{ (item.grant.reason or "")|e }}'
+                     )">
+                    <span class="award-icon">{{ item.award.icon }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="award-modal" id="awardModal" onclick="if(event.target===this) closeAwardModal()">
+            <div class="award-modal-content" id="awardModalContent">
+                <span class="award-modal-icon" id="awardModalIcon">🏅</span>
+                <div class="award-modal-rarity" id="awardModalRarity">COMMON</div>
+                <h2 class="award-modal-title" id="awardModalTitle">Награда</h2>
+                <p class="award-modal-description" id="awardModalDesc">Описание</p>
+                <div class="award-modal-meta">
+                    <div><span class="label">Получена</span><span class="value" id="awardModalDate">—</span></div>
+                    <div><span class="label">Причина</span><span class="value" id="awardModalReason">—</span></div>
+                </div>
+                <button class="award-modal-close" onclick="closeAwardModal()">Закрыть</button>
+            </div>
+        </div>
+
+        <script>
+            const RARITY_COLORS = {
+                'common':    { color: '#9ea3b0', glow: 'rgba(158,163,176,0.15)' },
+                'uncommon':  { color: '#5bd16b', glow: 'rgba(91,209,107,0.15)' },
+                'rare':      { color: '#4a9eff', glow: 'rgba(74,158,255,0.2)' },
+                'epic':      { color: '#b666ff', glow: 'rgba(182,102,255,0.25)' },
+                'legendary': { color: '#ffb84a', glow: 'rgba(255,184,74,0.3)' },
+            };
+            const RARITY_LABELS = { 'common': 'Обычная', 'uncommon': 'Необычная', 'rare': 'Редкая', 'epic': 'Эпическая', 'legendary': 'Легендарная' };
+            function openAwardModal(icon, name, rarity, description, date, reason) {
+                const modal = document.getElementById('awardModal');
+                const content = document.getElementById('awardModalContent');
+                const r = RARITY_COLORS[rarity] || RARITY_COLORS.common;
+                content.style.setProperty('--rarity-color', r.color);
+                content.style.setProperty('--rarity-glow', r.glow);
+                document.getElementById('awardModalIcon').textContent = icon;
+                document.getElementById('awardModalTitle').textContent = name;
+                document.getElementById('awardModalRarity').textContent = RARITY_LABELS[rarity] || rarity;
+                document.getElementById('awardModalDesc').textContent = description || '—';
+                document.getElementById('awardModalDate').textContent = date || '—';
+                document.getElementById('awardModalReason').textContent = reason || '—';
+                modal.classList.add('active');
+            }
+            function closeAwardModal() { document.getElementById('awardModal').classList.remove('active'); }
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAwardModal(); });
+        </script>
+        {% endif %}
+
+        {# ================= КНОПКИ ================= #}
+        {% if has_admin_access %}
+            <a href="/admin" class="btn btn-primary" style="margin: 16px 0 8px;">⚙️ Админ-панель</a>
+        {% endif %}
+        <a href="/p/{{ user.username }}" class="btn btn-outline" style="margin: 8px 0;">👁 Посмотреть публичный профиль</a>
+
+        {# ================= ИНФО ================= #}
+        <div class="card" style="text-align: left; margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-primary);">
+                <span style="color: var(--text-tertiary);">Discord ID</span>
+                <span style="color: #fff;">{{ user.discord_id }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-primary);">
+                <span style="color: var(--text-tertiary);">Minecraft UUID</span>
+                <span style="color: #fff; font-size: 12px;">{{ user.minecraft_uuid or 'Не указан' }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-primary);">
+                <span style="color: var(--text-tertiary);">Гражданство с</span>
+                <span style="color: #fff;">{{ user.citizenship_date.strftime('%d.%m.%Y') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                <span style="color: var(--text-tertiary);">Последний вход</span>
+                <span style="color: #fff;">{{ user.last_login.strftime('%d.%m.%Y %H:%M') if user.last_login else 'Недавно' }}</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

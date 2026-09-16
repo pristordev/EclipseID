@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Подача заявки{% endblock %}
+
+{% block content %}
+
+<section class="hero" style="justify-content: center; text-align: center;">
+    <div class="hero-content" style="max-width: 500px;">
+        <div class="badge" style="background: var(--accent-bg); color: var(--accent); border-color: rgba(var(--accent-rgb), 0.15);">
+            📜 Подача заявки
+        </div>
+        <h1 style="font-size: 40px;">
+            Стань частью<br>
+            <span>Империи</span> Плиера
+        </h1>
+        <p style="margin: 0 auto 30px; max-width: 100%; color: var(--text-secondary);">
+            {% if discord_username %}
+                Вы авторизованы как <strong style="color: #fff;">{{ discord_username }}</strong>
+            {% else %}
+                Введите ваш никнейм в Minecraft
+            {% endif %}
+        </p>
+
+        <form id="applicationForm" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="text"
+                   id="minecraftUsername"
+                   placeholder="Ваш никнейм в Minecraft"
+                   class="input"
+                   style="padding: 14px; font-size: 16px;">
+            <button type="submit" class="btn btn-primary btn-large" style="width: 100%;">
+                Подать заявку
+            </button>
+        </form>
+
+        <div id="errorMessage" style="color: #ff4444; margin-top: 12px; display: none;"></div>
+
+        <p style="margin-top: 20px; font-size: 13px; color: var(--text-muted);">
+            После подачи заявки вы будете перенаправлены в личный кабинет
+        </p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('applicationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('minecraftUsername').value.trim();
+        const errorDiv = document.getElementById('errorMessage');
+
+        if (!username) {
+            errorDiv.textContent = 'Введите никнейм в Minecraft';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+            const [key, value] = cookie.trim().split('=');
+            acc[key] = value;
+            return acc;
+        }, {});
+
+        const discord_id = cookies.pending_discord_id;
+        if (!discord_id) {
+            errorDiv.textContent = 'Ошибка: сессия истекла. Попробуйте авторизоваться заново.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/application?username=${encodeURIComponent(username)}&discord_id=${discord_id}`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                window.location.href = '/';
+            } else {
+                const data = await response.json();
+                errorDiv.textContent = data.detail || 'Ошибка при подаче заявки';
+                errorDiv.style.display = 'block';
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Ошибка соединения с сервером';
+            errorDiv.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

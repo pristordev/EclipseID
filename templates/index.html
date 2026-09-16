@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Империя Плиера{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+
+    <div class="hero-content">
+        <div class="badge" style="background: var(--accent-bg); color: var(--accent); border-color: rgba(var(--accent-rgb), 0.15);">
+            🕊️ Цифровой суверенитет
+        </div>
+        <h1>
+            Стань частью<br>
+            <span>Империи</span> будущего!
+        </h1>
+        <p>
+            Единая экосистема для граждан, армии и аппарата власти.
+            Личный кабинет, налоги, транзакции и полный контроль
+            в реальном времени.
+        </p>
+        <div class="hero-actions">
+            {% if current_user %}
+                <button class="btn btn-primary btn-large" onclick="window.location.href='/profile'">Войти в кабинет</button>
+            {% else %}
+                <button class="btn btn-primary btn-large" onclick="window.location.href='/auth/discord'">Авторизоваться</button>
+            {% endif %}
+            <a href="/about" class="btn btn-outline btn-large">О системе</a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ citizens_count }}</span>
+                <span class="stat-label">Граждан</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">12k+</span>
+                <span class="stat-label">Бюджет (алм.)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">24/7</span>
+                <span class="stat-label">Службы</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-visual">
+        <div class="terminal-header">
+            <span class="dot green"></span>
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span style="margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.15);">EclipseID · v.1.1.0</span>
+        </div>
+
+        <div class="terminal-line">
+            <span class="prompt">▶</span>
+            <span class="cmd">SESSION::INIT</span>
+            <span class="res"><span class="highlight">{{ ping_ms }}</span> ms</span>
+        </div>
+        <div class="terminal-line">
+            <span class="prompt">▶</span>
+            <span class="cmd">AUTH::CHECK</span>
+            <span class="res">user: <span class="highlight">
+                {% if current_user %}{{ current_user.username }}{% else %}No data{% endif %}
+            </span></span>
+        </div>
+        <div class="terminal-line">
+            <span class="prompt">▶</span>
+            <span class="cmd">BALANCE::FETCH</span>
+            <span class="res"><span class="highlight">
+                {% if current_user %}{{ current_user.reputation }}{% else %}No data{% endif %}
+            </span> rep.</span>
+        </div>
+        <div class="terminal-line">
+            <span class="prompt">▶</span>
+            <span class="cmd">ROLE::FETCH</span>
+            <span class="res"><span class="highlight">
+                {% if current_user %}{{ main_role_display }}{% else %}No data{% endif %}
+            </span></span>
+        </div>
+        <div class="terminal-line" style="border-bottom: none; margin-top: 8px; opacity: 0.4;">
+            <span class="prompt">_</span>
+            <span class="cmd" style="font-weight: 300;">waiting for command...</span>
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const pingElement = document.getElementById('pingValue');
+    if (pingElement) {
+        async function updatePing() {
+            try {
+                const response = await fetch('/api/ping');
+                const data = await response.json();
+                if (data.ping !== undefined) {
+                    pingElement.textContent = data.ping;
+                    if (data.ping < 50) pingElement.style.color = 'var(--accent)';
+                    else if (data.ping < 150) pingElement.style.color = '#f1c40f';
+                    else pingElement.style.color = '#e74c3c';
+                }
+            } catch (e) {}
+        }
+        updatePing();
+        setInterval(updatePing, 3000);
+    }
+</script>
+{% endblock %}

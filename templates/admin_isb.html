@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Управление ИСБ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header { display: flex; justify-content: space-between; align-items: center; padding: 30px 0 20px; border-bottom: 1px solid var(--border-primary); margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    .admin-header h1 { font-size: 28px; font-weight: 700; color: #fff; }
+    .admin-header h1 span { color: var(--gold); }
+    .btn-primary-action { background: var(--accent); color: var(--bg-primary); padding: 10px 22px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .btn-primary-action:hover { background: var(--accent-hover); transform: scale(1.02); }
+    .table-scroll { overflow-x: auto; }
+    .rank-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; background: var(--gold-bg); color: var(--gold); border: 1px solid rgba(212,175,55,0.15); }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; }
+    .status-badge.active { background: var(--accent-bg); color: var(--accent); }
+    .status-badge.inactive { background: rgba(255,107,107,0.1); color: #ff6b6b; }
+    .action-btn { padding: 5px 12px; border-radius: 6px; border: none; font-size: 12px; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-right: 4px; }
+    .action-btn.edit { background: var(--accent-bg); color: var(--accent); }
+    .action-btn.edit:hover { background: var(--accent-bg-hover); }
+    .action-btn.fire { background: rgba(255,50,50,0.1); color: #ff4444; }
+    .action-btn.fire:hover { background: rgba(255,50,50,0.2); }
+
+    /* Блок наград в модалке */
+    .awards-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-secondary); }
+    .awards-block > label { color: rgba(255,255,255,0.5); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 12px; }
+    .current-awards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; min-height: 32px; }
+    .award-pill { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: var(--bg-tertiary); font-size: 13px; color: #fff; }
+    .award-pill .icon { font-size: 18px; }
+    .award-pill .name { flex: 1; }
+    .award-pill .revoke { background: rgba(255,50,50,0.15); color: #ff4444; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: inherit; }
+    .award-pill .revoke:hover { background: rgba(255,50,50,0.25); }
+    .grant-box { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 14px; border: 1px solid var(--border-primary); }
+    .grant-box .title { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
+    .grant-box select, .grant-box input { width: 100%; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border-secondary); border-radius: 8px; color: #fff; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
+    .grant-box button { width: 100%; padding: 10px; background: var(--gold-bg); color: var(--gold); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .grant-box button:hover { background: rgba(212,175,55,0.25); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="admin-header">
+    <div>
+        <h1>🛡️ <span>Управление ИСБ</span></h1>
+        <div style="color: var(--text-tertiary); font-size: 14px; margin-top: 4px;">Сотрудников: <span id="empCount">0</span></div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn-primary-action" onclick="openHireModal()">➕ Принять в ИСБ</button>
+        <a href="/admin" style="background: var(--bg-hover); color: var(--text-secondary); padding: 10px 22px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">← Назад</a>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Служебный №</th>
+                    <th>Гражданин</th>
+                    <th>Звание</th>
+                    <th>Структура</th>
+                    <th>Должность</th>
+                    <th>Статус</th>
+                    <th style="text-align: center;">Действия</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">Загрузка...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- МОДАЛКА -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <h2 id="modalTitle">Принять в ИСБ</h2>
+        <div class="modal-sub" id="modalSub">Заполните данные</div>
+
+        <input type="hidden" id="editId">
+
+        <div class="form-group" id="citizenGroup">
+            <label>Гражданин</label>
+            <select id="editCitizen" class="input-field">
+                <option value="">— Выберите гражданина —</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Звание</label>
+            <select id="editRank" class="input-field">
+                <option value="">— Выберите звание —</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Должность (опционально)</label>
+            <input type="text" id="editPosition" class="input-field" placeholder="Например: Командир 3-го взвода">
+        </div>
+
+        <div class="awards-block" id="awardsBlock" style="display: none;">
+            <label>🏅 Награды сотрудника</label>
+            <div class="current-awards" id="currentAwards"></div>
+
+            <div class="grant-box">
+                <div class="title">➕ Выдать награду</div>
+                <select id="awardSelect">
+                    <option value="">— Выберите награду —</option>
+                </select>
+                <input type="text" id="awardReason" placeholder="Причина (опционально)">
+                <button type="button" onclick="grantAwardToEmployee()">🎖 Выдать награду</button>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-save" onclick="saveEmployee()">💾 Сохранить</button>
+            <button class="btn-danger" id="fireBtn" onclick="fireEmployee()">🗑 Уволить</button>
+            <button class="btn-cancel" onclick="closeModal()">✕ Отмена</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let employees = [];
+    let availableCitizens = [];
+    let ranks = [];
+    let allAwards = [];
+    let editingId = null;
+
+    const BRANCH_NAMES = {
+        "army": "⚔️ Вооружённые силы",
+        "fleet": "🚀 Флот",
+        "intelligence": "🕵️ Разведка",
+        "ideology": "📢 Идеология",
+        "command": "👑 Командование",
+        "cc": "☄️ Центральный комитет",
+    };
+
+    const RARITY_COLORS = {
+        'common': '#9ea3b0',
+        'uncommon': '#5bd16b',
+        'rare': '#4a9eff',
+        'epic': '#b666ff',
+        'legendary': '#ffb84a',
+    };
+
+    // ================== ЗАГРУЗКА ==================
+    async function loadData() {
+        try {
+            const [empRes, citRes, rankRes, awardRes] = await Promise.all([
+                fetch('/api/admin/isb/employees'),
+                fetch('/api/admin/isb/available-citizens'),
+                fetch('/api/admin/isb/ranks'),
+                fetch('/api/admin/isb/awards')
+            ]);
+            employees = (await empRes.json()).data || [];
+            availableCitizens = (await citRes.json()).data || [];
+            ranks = (await rankRes.json()).data || [];
+            allAwards = (await awardRes.json()).data || [];
+            renderTable();
+            document.getElementById('empCount').textContent = employees.length;
+        } catch (e) {
+            console.error('Ошибка загрузки:', e);
+        }
+    }
+
+    // ================== ТАБЛИЦА ==================
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        if (employees.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">Нет сотрудников</td></tr>';
+            return;
+        }
+        tbody.innerHTML = employees.map((e, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td style="font-family: monospace; color: var(--accent);">${e.service_number}</td>
+                <td><strong style="color: #fff;">${e.username}</strong></td>
+                <td><span class="rank-badge">${e.rank_name}</span></td>
+                <td>${BRANCH_NAMES[e.branch] || e.branch}</td>
+                <td>${e.position || '—'}</td>
+                <td><span class="status-badge ${e.is_active ? 'active' : 'inactive'}">${e.is_active ? 'Активен' : 'Уволен'}</span></td>
+                <td style="text-align: center;">
+                    ${e.is_active ? `<button class="action-btn edit" onclick="openEditModal(${e.id})">✎</button><button class="action-btn fire" onclick="confirmFire(${e.id})">✕</button>` : '—'}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ================== ОТКРЫТИЕ МОДАЛОК ==================
+    function openHireModal() {
+        editingId = null;
+        document.getElementById('modalTitle').textContent = '➕ Принять в ИСБ';
+        document.getElementById('modalSub').textContent = 'Заполните данные нового сотрудника';
+        document.getElementById('citizenGroup').style.display = '';
+        document.getElementById('fireBtn').style.display = 'none';
+        document.getElementById('awardsBlock').style.display = 'none';
+
+        const citSelect = document.getElementById('editCitizen');
+        citSelect.innerHTML = '<option value="">— Выберите гражданина —</option>' +
+            availableCitizens.map(c => `<option value="${c.id}">${c.username}</option>`).join('');
+
+        const rankSelect = document.getElementById('editRank');
+        rankSelect.innerHTML = '<option value="">— Выберите звание —</option>' +
+            ranks.map(r => `<option value="${r.key}">${r.rank_name} (${BRANCH_NAMES[r.branch] || r.branch})</option>`).join('');
+
+        document.getElementById('editPosition').value = '';
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    async function openEditModal(id) {
+        const emp = employees.find(e => e.id === id);
+        if (!emp) return;
+        editingId = id;
+
+        document.getElementById('modalTitle').textContent = '✎ Редактирование';
+        document.getElementById('modalSub').textContent = emp.username + ' · ' + emp.service_number;
+        document.getElementById('citizenGroup').style.display = 'none';
+        document.getElementById('fireBtn').style.display = 'block';
+
+        const rankSelect = document.getElementById('editRank');
+        rankSelect.innerHTML = '<option value="">— Оставить текущее —</option>' +
+            ranks.map(r => `<option value="${r.key}">${r.rank_name} (${BRANCH_NAMES[r.branch] || r.branch})</option>`).join('');
+
+        document.getElementById('editPosition').value = emp.position || '';
+
+        document.getElementById('awardsBlock').style.display = 'block';
+        const awardSelect = document.getElementById('awardSelect');
+        awardSelect.innerHTML = '<option value="">— Выберите награду —</option>' +
+            allAwards.map(a => `<option value="${a.id}">${a.icon || '🏅'} ${a.display_name}</option>`).join('');
+        document.getElementById('awardReason').value = '';
+
+        await loadEmployeeAwards(id);
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    // ================== СОХРАНЕНИЕ ==================
+    async function saveEmployee() {
+        const rankKey = document.getElementById('editRank').value;
+        const position = document.getElementById('editPosition').value.trim();
+
+        if (editingId) {
+            let query = `?position=${encodeURIComponent(position)}`;
+            if (rankKey) query += `&rank_key=${rankKey}`;
+            const res = await fetch(`/api/admin/isb/employees/${editingId}${query}`, { method: 'PUT' });
+            if (res.ok) { closeModal(); await loadData(); }
+            else { const err = await res.json(); alert('Ошибка: ' + (err.detail || '')); }
+        } else {
+            const citizenId = document.getElementById('editCitizen').value;
+            if (!citizenId) { alert('Выберите гражданина'); return; }
+            if (!rankKey) { alert('Выберите звание'); return; }
+            const query = `?citizen_id=${citizenId}&rank_key=${rankKey}&position=${encodeURIComponent(position)}`;
+            const res = await fetch(`/api/admin/isb/hire${query}`, { method: 'POST' });
+            if (res.ok) { closeModal(); await loadData(); }
+            else { const err = await res.json(); alert('Ошибка: ' + (err.detail || '')); }
+        }
+    }
+
+    // ================== УВОЛЬНЕНИЕ ==================
+    function confirmFire(id) {
+        if (confirm('Уволить сотрудника?')) fireEmployee(id);
+    }
+
+    async function fireEmployee(id) {
+        const targetId = id || editingId;
+        if (!targetId) return;
+        const res = await fetch(`/api/admin/isb/employees/${targetId}`, { method: 'DELETE' });
+        if (res.ok) { closeModal(); await loadData(); }
+        else { const err = await res.json(); alert('Ошибка: ' + (err.detail || '')); }
+    }
+
+    // ================== НАГРАДЫ ==================
+    async function loadEmployeeAwards(employeeId) {
+        const container = document.getElementById('currentAwards');
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 12px;">Загрузка...</span>';
+        try {
+            const res = await fetch(`/api/admin/isb/employees/${employeeId}/awards`);
+            const data = await res.json();
+            const awards = data.data || [];
+            if (awards.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-muted); font-size: 12px;">Нет наград</span>';
+                return;
+            }
+            container.innerHTML = awards.map(a => {
+                const color = RARITY_COLORS[a.award_rarity] || '#9ea3b0';
+                return `
+                    <div class="award-pill" style="border-left: 3px solid ${color};">
+                        <span class="icon">${a.award_icon}</span>
+                        <span class="name">${a.award_name}</span>
+                        <button class="revoke" onclick="revokeAwardFromEmployee(${a.grant_id}, ${employeeId})">✕</button>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            container.innerHTML = '<span style="color: #ff6b6b; font-size: 12px;">Ошибка загрузки</span>';
+        }
+    }
+
+    async function grantAwardToEmployee() {
+        if (!editingId) return;
+        const awardId = document.getElementById('awardSelect').value;
+        const reason = document.getElementById('awardReason').value.trim();
+        if (!awardId) { alert('Выберите награду'); return; }
+
+        const query = `?award_id=${awardId}&reason=${encodeURIComponent(reason)}`;
+        const res = await fetch(`/api/admin/isb/employees/${editingId}/awards${query}`, { method: 'POST' });
+        if (res.ok) {
+            await loadEmployeeAwards(editingId);
+            document.getElementById('awardSelect').value = '';
+            document.getElementById('awardReason').value = '';
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.detail || ''));
+        }
+    }
+
+    async function revokeAwardFromEmployee(grantId, employeeId) {
+        if (!confirm('Забрать эту награду?')) return;
+        const res = await fetch(`/api/admin/isb/awards/grant/${grantId}`, { method: 'DELETE' });
+        if (res.ok) {
+            await loadEmployeeAwards(employeeId);
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.detail || ''));
+        }
+    }
+
+    // ================== СОБЫТИЯ ==================
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+    loadData();
+</script>
+{% endblock %}

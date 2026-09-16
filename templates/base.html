@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EclipseID · Цифровая экосистема{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <div class="container">
+
+        {% include "header.html" %}
+
+        {% block content %}{% endblock %}
+
+        <footer class="footer">
+            <span>© 2027 EclipseID · Имперская цифровая экосистема</span>
+            <span>Политика · Безопасность · Служба поддержки</span>
+        </footer>
+
+    </div>
+
+    <!-- МОДАЛКА ПОИСКА -->
+    <div class="search-modal-overlay" id="searchModal" onclick="if(event.target===this) closeSearch()">
+        <div class="search-modal">
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text"
+                       id="searchInput"
+                       placeholder="Поиск граждан, ролей, наград, ИСБ…"
+                       autocomplete="off"
+                       oninput="doSearch(this.value)"
+                       onkeydown="if(event.key==='Escape') closeSearch()">
+                <button class="search-close" onclick="closeSearch()">✕</button>
+            </div>
+            <div class="search-results" id="searchResults">
+                <div class="search-hint">Начните вводить запрос…</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
