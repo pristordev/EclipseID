@@ -2,13 +2,14 @@ from fastapi import APIRouter, Request, Depends, Response, Query, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, select
 from pathlib import Path
 import time
 
 from database.db import get_db
 from database import crud
-from auth import get_current_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from database.models import StatsHistory
+from auth import get_current_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, has_permission
 from auth.discord import get_discord_oauth_url, get_discord_user
 from utils.minecraft import get_minecraft_uuid
 from utils.avatars import get_avatar_url
@@ -234,7 +235,7 @@ async def submit_application(
 
 
 # ============================================
-#  АДМИНКА
+#  АДМИН-ПАНЕЛЬ (с реальными графиками)
 # ============================================
 
 @router.get("/admin", response_class=HTMLResponse)
@@ -266,8 +267,22 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
                 if role.id == rid:
                     roles_stats[role.name]["count"] += 1
 
-    citizens_history = [citizens_count] * 12  # заглушка — потом сделаем реальные данные
-    requests_history = [0] * 9                 # заглушка
+    # ===== Реальная история из stats_history =====
+    stats_result = await db.execute(
+        select(StatsHistory).order_by(StatsHistory.snapshot_at.desc()).limit(24)
+    )
+    snapshots = list(reversed(stats_result.scalars().all()))
+
+    if len(snapshots) < 2:
+        citizens_history = [citizens_count] * 12
+        requests_history = [0] * 9
+        labels = ["—"] * 12
+        requests_labels = ["—"] * 9
+    else:
+        citizens_history = [s.citizens_count for s in snapshots][-12:]
+        requests_history = [s.api_requests for s in snapshots][-9:]
+        labels = [s.snapshot_at.strftime("%H:%M") for s in snapshots][-12:]
+        requests_labels = [s.snapshot_at.strftime("%H:%M") for s in snapshots][-9:]
 
     context = {
         "current_user": current_user,
@@ -277,11 +292,17 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
         "roles_stats": roles_stats,
         "citizens_history": citizens_history,
         "requests_history": requests_history,
-        "total_requests": sum(requests_history) * 10,
+        "labels": labels,
+        "requests_labels": requests_labels,
+        "total_requests": sum(requests_history) if requests_history else 0,
         "active_users": citizens_count,
     }
     return templates.TemplateResponse(request=request, name="admin.html", context=context)
 
+
+# ============================================
+#  АДМИНКА: ГРАЖДАНЕ
+# ============================================
 
 @router.get("/admin/citizens", response_class=HTMLResponse)
 async def admin_citizens(request: Request, db: AsyncSession = Depends(get_db)):
@@ -306,6 +327,10 @@ async def admin_citizens(request: Request, db: AsyncSession = Depends(get_db)):
     return templates.TemplateResponse(request=request, name="admin_citizens.html", context=context)
 
 
+# ============================================
+#  АДМИНКА: РОЛИ
+# ============================================
+
 @router.get("/admin/roles", response_class=HTMLResponse)
 async def admin_roles_page(request: Request, db: AsyncSession = Depends(get_db)):
     current_user = await get_current_user(request, db)
@@ -325,28 +350,6 @@ async def admin_roles_page(request: Request, db: AsyncSession = Depends(get_db))
         "avatar_url": avatar_url,
     }
     return templates.TemplateResponse(request=request, name="admin_roles.html", context=context)
-
-
-@router.get("/admin/isb", response_class=HTMLResponse)
-async def admin_isb_page(request: Request, db: AsyncSession = Depends(get_db)):
-    current_user = await get_current_user(request, db)
-    if not current_user:
-        return RedirectResponse("/auth/discord")
-
-    role_ids = current_user.role_ids or [1]
-    roles = await crud.get_roles_by_ids(db, role_ids)
-    max_level = max((r.level for r in roles), default=0)
-    if max_level < 95:
-        raise HTTPException(status_code=403, detail="Доступ запрещён")
-
-    avatar_url = get_avatar_url(current_user.minecraft_uuid) if current_user.minecraft_uuid else None
-
-    context = {
-        "current_user": current_user,
-        "avatar_url": avatar_url,
-    }
-    return templates.TemplateResponse(request=request, name="admin_isb.html", context=context)
-
 
 # ============================================
 #  ПУБЛИЧНЫЙ ПРОФИЛЬ
@@ -445,3 +448,75 @@ async def citizens_list(request: Request, db: AsyncSession = Depends(get_db)):
         "total": len(citizens_data),
     }
     return templates.TemplateResponse(request=request, name="citizens.html", context=context)
+
+  # ============================================
+#  АЛГОРИТМЫ
+# ============================================
+
+@router.get("/algorithms", response_class=HTMLResponse)
+async def algorithms_list(request: Request, db: AsyncSession = Depends(get_db)):
+    """Список алгоритмов"""
+    current_user = await get_current_user(request, db)
+    avatar_url = get_avatar_url(current_user.minecraft_uuid) if current_user and current_user.minecraft_uuid else None
+
+    context = {
+        "current_user": current_user,
+        "avatar_url": avatar_url,
+    }
+    return templates.TemplateResponse(request=request, name="algorithms.html", context=context)
+
+
+@router.get("/algorithms/{number}", response_class=HTMLResponse)
+async def algorithm_detail(number: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Детали алгоритма"""
+    current_user = await get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse("/auth/discord")
+
+    avatar_url = get_avatar_url(current_user.minecraft_uuid) if current_user.minecraft_uuid else None
+
+    # Проверяем существование
+    from database import crud_algorithms as algo_crud
+    algo = await algo_crud.get_algorithm_by_number(db, number)
+    if not algo:
+        raise HTTPException(status_code=404, detail="Алгоритм не найден")
+
+    context = {
+        "current_user": current_user,
+        "avatar_url": avatar_url,
+        "algorithm_number": number,
+    }
+    return templates.TemplateResponse(request=request, name="algorithm_detail.html", context=context)
+
+
+@router.get("/admin/algorithms", response_class=HTMLResponse)
+async def admin_algorithms_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Админка алгоритмов"""
+    current_user = await get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse("/auth/discord")
+
+    # Проверка права
+    from auth import has_permission
+    if not await has_permission(db, current_user, "view_all_algorithms"):
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    avatar_url = get_avatar_url(current_user.minecraft_uuid) if current_user.minecraft_uuid else None
+
+    context = {
+        "current_user": current_user,
+        "avatar_url": avatar_url,
+    }
+    return templates.TemplateResponse(request=request, name="admin_algorithms.html", context=context)
+
+@router.get("/isb/awards", response_class=HTMLResponse)
+async def isb_awards_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Публичная витрина наград ИСБ"""
+    current_user = await get_current_user(request, db)
+    avatar_url = get_avatar_url(current_user.minecraft_uuid) if current_user and current_user.minecraft_uuid else None
+
+    context = {
+        "current_user": current_user,
+        "avatar_url": avatar_url,
+    }
+    return templates.TemplateResponse(request=request, name="isb_awards.html", context=context)

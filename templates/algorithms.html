@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Алгоритмы{% endblock %}
+
+{% block extra_css %}
+<style>
+    .algo-header { padding: 30px 0 20px; border-bottom: 1px solid var(--border-primary); margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .algo-header h1 { font-size: 28px; font-weight: 700; color: #fff; }
+    .algo-header h1 span { color: var(--accent); }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn { padding: 6px 14px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-secondary); color: var(--text-secondary); cursor: pointer; font-family: inherit; font-size: 13px; transition: all 0.2s; }
+    .filter-btn:hover, .filter-btn.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+
+    .algo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .algo-card { background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; transition: all 0.25s; display: block; text-decoration: none; color: inherit; cursor: pointer; }
+    .algo-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .algo-card .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 8px; }
+    .algo-card .number { font-family: monospace; color: var(--accent); font-size: 12px; }
+    .algo-card .title { color: #fff; font-size: 16px; font-weight: 600; margin: 8px 0; line-height: 1.3; }
+    .algo-card .meta { display: flex; gap: 12px; color: var(--text-tertiary); font-size: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .algo-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .algo-badge.mining { background: rgba(255,154,60,0.15); color: #ff9a3c; }
+    .algo-badge.building { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .algo-badge.sorting { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .algo-badge.status-open { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .algo-badge.status-in_progress { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .algo-badge.status-review { background: rgba(255,184,74,0.15); color: #ffb84a; }
+    .algo-badge.status-completed { background: rgba(158,163,176,0.15); color: #9ea3b0; }
+    .algo-badge.status-expired { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+    .algo-badge.scope-public { background: rgba(0,212,170,0.1); color: #00d4aa; }
+    .algo-badge.scope-personal { background: rgba(182,102,255,0.15); color: #b666ff; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="algo-header">
+    <div>
+        <h1>🔧 <span>Алгоритмы</span></h1>
+        <div style="color: var(--text-tertiary); font-size: 14px; margin-top: 4px;">Рабочие задачи Империи</div>
+    </div>
+    <div class="filters">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Все</button>
+        <button class="filter-btn" data-filter="mining" onclick="setFilter('mining')">⛏️ Добыча</button>
+        <button class="filter-btn" data-filter="building" onclick="setFilter('building')">🏗️ Стройка</button>
+        <button class="filter-btn" data-filter="sorting" onclick="setFilter('sorting')">📦 Сортировка</button>
+    </div>
+</div>
+
+<div id="algorithmsGrid" class="algo-grid">
+    <div style="text-align: center; padding: 40px; color: var(--text-tertiary); grid-column: 1/-1;">Загрузка...</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allAlgorithms = [];
+    let currentFilter = 'all';
+
+    const TASK_LABELS = { mining: 'Добыча', building: 'Стройка', sorting: 'Сортировка' };
+    const TASK_ICONS = { mining: '⛏️', building: '🏗️', sorting: '📦' };
+    const STATUS_LABELS = { open: 'Открыт', in_progress: 'В работе', review: 'На проверке', completed: 'Завершён', expired: 'Просрочен' };
+
+    async function loadAlgorithms() {
+        try {
+            const res = await fetch('/api/algorithms');
+            const data = await res.json();
+            allAlgorithms = data.data || [];
+            renderAlgorithms();
+        } catch (e) {
+            document.getElementById('algorithmsGrid').innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="icon">⚠️</span><h3>Ошибка загрузки</h3></div>';
+        }
+    }
+
+    function setFilter(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-filter') === filter);
+        });
+        renderAlgorithms();
+    }
+
+    function renderAlgorithms() {
+        const grid = document.getElementById('algorithmsGrid');
+        let filtered = allAlgorithms;
+        if (currentFilter !== 'all') {
+            filtered = allAlgorithms.filter(a => a.task_type === currentFilter);
+        }
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="icon">📭</span><h3>Нет алгоритмов</h3><p>Пока кураторы не выдали ни одной задачи</p></div>';
+            return;
+        }
+
+        const TASK_ICONS = { mining: '⛏️', building: '🏗️', sorting: '📦' };
+        const STATUS_LABELS = { open: 'Открыт', in_progress: 'В работе', review: 'На проверке', completed: 'Завершён', expired: 'Просрочен' };
+
+        grid.innerHTML = filtered.map(a => {
+            const deadline = new Date(a.deadline);
+            const now = new Date();
+            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+            const deadlineText = daysLeft > 0 ? `⏰ ${daysLeft} дн.` : '⚠️ Просрочен';
+
+            return `
+                <a href="/algorithms/${a.number}" class="algo-card">
+                    <div class="top">
+                        <span class="number">${a.number}</span>
+                        <span class="algo-badge scope-${a.scope}">${a.scope === 'public' ? '🌐 Общий' : '🔒 Личный'}</span>
+                    </div>
+                    <div class="title">${TASK_ICONS[a.task_type] || '📋'} ${a.title}</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span class="algo-badge ${a.task_type}">${TASK_LABELS[a.task_type] || a.task_type}</span>
+                        <span class="algo-badge status-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
+                    </div>
+                    <div class="meta">
+                        <span>👤 ${a.creator.username}</span>
+                        <span>👥 ${a.participants_count}/${a.max_participants}</span>
+                        <span>${deadlineText}</span>
+                    </div>
+                </a>
+            `;
+        }).join('');
+    }
+
+    loadAlgorithms();
+</script>
+{% endblock %}

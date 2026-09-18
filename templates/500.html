@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · 500{% endblock %}
+
+{% block content %}
+
+<section class="hero" style="justify-content: center; text-align: center; min-height: 60vh;">
+    <div class="hero-content" style="max-width: 560px;">
+        <div class="badge" style="background: rgba(255,50,50,0.08); color: #ff6b6b; border-color: rgba(255,50,50,0.15);">
+            ⚠️ Ошибка 500
+        </div>
+
+        <h1 style="font-size: 120px; margin: 20px 0 0; line-height: 1;">
+            <span style="color: var(--accent);">5</span>0<span style="color: var(--accent);">0</span>
+        </h1>
+
+        <h2 style="font-size: 28px; margin: 20px 0 12px; color: var(--text-primary);">
+            Внутренняя ошибка сервера
+        </h2>
+
+        <p style="margin: 0 auto 40px; color: var(--text-secondary);">
+            Что-то пошло не так на нашей стороне. Администраторы уже уведомлены.
+            Попробуйте обновить страницу через несколько секунд.
+        </p>
+
+        <div class="hero-actions" style="justify-content: center;">
+            <a href="/" class="btn btn-primary btn-large">← На главную</a>
+            <button onclick="location.reload()" class="btn btn-outline btn-large">🔄 Обновить</button>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

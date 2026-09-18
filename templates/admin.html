@@ -79,6 +79,14 @@
 </div>
 
 <div class="admin-grid">
+    <a href="/docs" class="admin-card">
+        <span class="icon">🗃️</span>
+        <h3>API Документация</h3>
+        <p>Просмотр, тестирование</p>
+        <span class="count">Swgger</span>
+        <span class="arrow">→</span>
+    </a>
+  
     <a href="/admin/citizens" class="admin-card">
         <span class="icon">👥</span>
         <h3>Управление гражданами</h3>
@@ -87,19 +95,19 @@
         <span class="arrow">→</span>
     </a>
 
+    <a href="/admin/algorithms" class="admin-card">
+        <span class="icon">🔧</span>
+        <h3>Управление алгоритмами</h3>
+        <p>Создание задач, оценка работы</p>
+        <span class="count">ALG</span>
+        <span class="arrow">→</span>
+    </a>
+
     <a href="/admin/roles" class="admin-card">
         <span class="icon">🎖️</span>
         <h3>Управление ролями</h3>
         <p>Назначение и снятие должностей</p>
         <span class="count">{{ roles_stats|length }}</span>
-        <span class="arrow">→</span>
-    </a>
-
-    <a href="/admin/isb" class="admin-card">
-        <span class="icon">🛡️</span>
-        <h3>Управление ИСБ</h3>
-        <p>Приём, звания, награды, увольнение</p>
-        <span class="count">ИСБ</span>
         <span class="arrow">→</span>
     </a>
 </div>
@@ -132,72 +140,60 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#00d4aa';
-  const ACCENT_RGB = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() || '0, 212, 170';
-  const TEXT_MUTED = 'rgba(255, 255, 255, 0.2)';
-  const GRID_COLOR = 'rgba(255, 255, 255, 0.04)';
-  
-  new Chart(document.getElementById('citizensChart').getContext('2d'), {
-      type: 'line',
-      data: {
-          labels: ['00','02','04','06','08','10','12','14','16','18','20','22'],
-          datasets: [{
-              label: 'Граждане',
-              data: [{{ citizens_history|join(', ') }}],
-              borderColor: ACCENT,
-              backgroundColor: `rgba(${ACCENT_RGB}, 0.1)`,
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 3,
-              pointBackgroundColor: ACCENT,
-              pointBorderColor: ACCENT,
-          }]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: { legend: { display: false } },
-          scales: {
-              x: {
-                  grid: { color: GRID_COLOR, drawBorder: false },
-                  ticks: { color: TEXT_MUTED, font: { size: 9 } }
-              },
-              y: {
-                  grid: { color: GRID_COLOR, drawBorder: false },
-                  ticks: { color: TEXT_MUTED, font: { size: 9 }, stepSize: 1 }
-              }
-          }
-      }
-  });
-  
-  new Chart(document.getElementById('requestsChart').getContext('2d'), {
-      type: 'bar',
-      data: {
-          labels: ['00','00:30','01','01:30','02','02:30','03','03:30','04'],
-          datasets: [{
-              label: 'Запросы',
-              data: [{{ requests_history|join(', ') }}],
-              backgroundColor: `rgba(${ACCENT_RGB}, 0.4)`,
-              borderColor: ACCENT,
-              borderWidth: 1,
-              borderRadius: 4,
-          }]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: { legend: { display: false } },
-          scales: {
-              x: {
-                  grid: { color: GRID_COLOR, drawBorder: false },
-                  ticks: { color: TEXT_MUTED, font: { size: 8 }, maxRotation: 45 }
-              },
-              y: {
-                  grid: { color: GRID_COLOR, drawBorder: false },
-                  ticks: { color: TEXT_MUTED, font: { size: 9 }, stepSize: 1 }
-              }
-          }
-      }
-  });
+    const ACCENT_RGB = getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim() || '0, 212, 170';
+    const TEXT_MUTED = 'rgba(255, 255, 255, 0.3)';
+    const GRID_COLOR = 'rgba(255, 255, 255, 0.04)';
+
+    new Chart(document.getElementById('citizensChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: {{ labels|tojson }},
+            datasets: [{
+                label: 'Граждане',
+                data: {{ citizens_history|tojson }},
+                borderColor: ACCENT,
+                backgroundColor: 'rgba(${ACCENT_RGB}, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: ACCENT,
+                pointBorderColor: ACCENT,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: GRID_COLOR, drawBorder: false }, ticks: { color: TEXT_MUTED, font: { size: 9 } } },
+                y: { grid: { color: GRID_COLOR, drawBorder: false }, ticks: { color: TEXT_MUTED, font: { size: 9 }, stepSize: 1 } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('requestsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ requests_labels|tojson }},
+            datasets: [{
+                label: 'Запросы',
+                data: {{ requests_history|tojson }},
+                backgroundColor: `rgba(${ACCENT_RGB}, 0.4)`,
+                borderColor: ACCENT,
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: GRID_COLOR, drawBorder: false }, ticks: { color: TEXT_MUTED, font: { size: 8 }, maxRotation: 45 } },
+                y: { grid: { color: GRID_COLOR, drawBorder: false }, ticks: { color: TEXT_MUTED, font: { size: 9 }, stepSize: 1 } }
+            }
+        }
+    });
 </script>
 {% endblock %}

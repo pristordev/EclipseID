@@ -166,6 +166,10 @@ async def hire_employee(
         is_active=True,
     )
     db.add(employee)
+
+    from database.isb_access import get_access_level_for_rank
+    employee.access_level = get_access_level_for_rank(rank_data["rank_name"])
+
     await db.commit()
     await db.refresh(employee)
 
@@ -207,6 +211,8 @@ async def update_employee(
         employee.rank_short = rank_data.get("rank_short")
         employee.branch = rank_data["branch"]
         employee.level = rank_data["level"]
+        from database.isb_access import get_access_level_for_rank
+        employee.access_level = get_access_level_for_rank(rank_data["rank_name"])
         employee.can_arrest = rank_data.get("can_arrest", False)
         employee.can_conduct_searches = rank_data.get("can_conduct_searches", False)
         employee.can_issue_warrants = rank_data.get("can_issue_warrants", False)
@@ -418,3 +424,86 @@ async def revoke_award(
     await db.commit()
 
     return {"status": "success", "message": "Награда отозвана"}
+
+# ============================================
+#  ПУБЛИЧНЫЙ КАТАЛОГ НАГРАД
+# ============================================
+
+@router.get("/awards/public")
+async def get_public_awards(db: AsyncSession = Depends(get_db)):
+    """Публичный каталог всех наград"""
+    from sqlalchemy import func as sql_func
+
+    # Все награды
+    awards_result = await db.execute(
+        select(ISBAward).where(ISBAward.is_active == True).order_by(ISBAward.rarity, ISBAward.display_name)
+    )
+    awards = list(awards_result.scalars().all())
+
+    result = []
+    for a in awards:
+        # Сколько раз выдана
+        count_result = await db.execute(
+            select(sql_func.count(ISBAwardGrant.id)).where(ISBAwardGrant.award_id == a.id)
+        )
+        grants_count = count_result.scalar() or 0
+
+        result.append({
+            "id": a.id,
+            "name": a.name,
+            "display_name": a.display_name,
+            "description": a.description,
+            "icon": a.icon,
+            "rarity": a.rarity,
+            "category": a.category,
+            "grants_count": grants_count,
+        })
+
+    return {
+        "status": "success",
+        "count": len(result),
+        "data": result
+    }
+
+
+@router.get("/awards/public/top")
+async def get_top_awarded(db: AsyncSession = Depends(get_db)):
+    """Топ-10 сотрудников по количеству наград"""
+    from sqlalchemy import func as sql_func
+
+    result = await db.execute(
+        select(
+            ISBAwardGrant.employee_id,
+            sql_func.count(ISBAwardGrant.id).label("count")
+        )
+        .group_by(ISBAwardGrant.employee_id)
+        .order_by(sql_func.count(ISBAwardGrant.id).desc())
+        .limit(10)
+    )
+    rows = result.all()
+
+    data = []
+    for emp_id, count in rows:
+        emp_result = await db.execute(select(ISBEmployee).where(ISBEmployee.id == emp_id))
+        emp = emp_result.scalar_one_or_none()
+        if not emp:
+            continue
+
+        from database.models import Citizen
+        citizen_result = await db.execute(select(Citizen).where(Citizen.id == emp.citizen_id))
+        citizen = citizen_result.scalar_one_or_none()
+
+        from utils.avatars import get_avatar_url
+        avatar_url = get_avatar_url(citizen.minecraft_uuid) if citizen and citizen.minecraft_uuid else None
+
+        data.append({
+            "employee_id": emp.id,
+            "citizen_id": emp.citizen_id,
+            "username": citizen.username if citizen else "—",
+            "rank_name": emp.rank_name,
+            "service_number": emp.service_number,
+            "avatar_url": avatar_url,
+            "awards_count": count,
+        })
+
+    return {"status": "success", "data": data}

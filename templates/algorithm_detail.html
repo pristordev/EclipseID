@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Алгоритм {{ algorithm_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .algo-detail { max-width: 1000px; margin: 0 auto; padding: 30px 0; }
+
+    /* Заголовок */
+    .algo-title-box { background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.05) 0%, transparent 100%); border: 1px solid var(--border-primary); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; position: relative; overflow: hidden; }
+    .algo-title-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+    .algo-title-box .number { font-family: monospace; color: var(--accent); font-size: 13px; }
+    .algo-title-box h1 { font-size: 32px; font-weight: 700; color: #fff; margin: 8px 0 16px; line-height: 1.2; }
+    .algo-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .algo-badge { display: inline-block; padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .algo-badge.mining { background: rgba(255,154,60,0.15); color: #ff9a3c; }
+    .algo-badge.building { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .algo-badge.sorting { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .algo-badge.status-open { background: rgba(0,212,170,0.15); color: #00d4aa; }
+    .algo-badge.status-in_progress { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .algo-badge.status-review { background: rgba(255,184,74,0.15); color: #ffb84a; }
+    .algo-badge.status-completed { background: rgba(158,163,176,0.15); color: #9ea3b0; }
+    .algo-badge.status-expired { background: rgba(255,107,107,0.15); color: #ff6b6b; }
+    .algo-badge.scope-public { background: rgba(0,212,170,0.1); color: #00d4aa; }
+    .algo-badge.scope-personal { background: rgba(182,102,255,0.15); color: #b666ff; }
+
+    /* Инфо-карточки */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 24px 0; }
+    .info-box { background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 12px; padding: 16px 20px; transition: all 0.2s; }
+    .info-box:hover { border-color: var(--border-hover); }
+    .info-box .label { color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .info-box .value { color: #fff; font-size: 16px; font-weight: 600; }
+
+    /* Описание */
+    .section-title { color: var(--text-secondary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin: 28px 0 12px; display: flex; align-items: center; gap: 8px; }
+    .description { color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.75; padding: 20px 24px; background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 12px; }
+
+    /* Галерея картинок */
+    .attachments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+    .attachment-card { display: block; border-radius: 10px; overflow: hidden; background: var(--bg-tertiary); border: 1px solid var(--border-primary); text-decoration: none; transition: all 0.25s; }
+    .attachment-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+    .attachment-card.image { aspect-ratio: 4 / 3; }
+    .attachment-card.image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .attachment-card.file { padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .attachment-card.file .icon { font-size: 36px; }
+    .attachment-card .filename { color: #fff; font-size: 12px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .attachment-card .filepath-hint { color: var(--text-tertiary); font-size: 10px; margin-top: 4px; }
+
+    /* Участники */
+    .participants-list { display: flex; flex-direction: column; gap: 8px; }
+    .participant-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 12px; transition: all 0.2s; }
+    .participant-row:hover { border-color: var(--border-hover); }
+    .participant-row .avatar { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--bg-hover); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+    .participant-row .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    .participant-row .info { flex: 1; min-width: 0; }
+    .participant-row .username { color: #fff; font-weight: 600; font-size: 15px; }
+    .participant-row .status { color: var(--text-tertiary); font-size: 12px; margin-top: 2px; }
+    .participant-row .stars { color: #ffb84a; font-size: 14px; }
+
+    /* Отчёт */
+    .report-block { margin-top: 10px; padding: 14px 16px; background: var(--bg-tertiary); border-left: 3px solid var(--accent); border-radius: 8px; }
+    .report-block .report-text { color: rgba(255,255,255,0.7); font-size: 13px; line-height: 1.6; }
+    .report-block .report-files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .report-block .report-files img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-primary); }
+
+    /* Кнопки */
+    .action-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+    .report-box { background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 12px; padding: 20px; margin-top: 16px; }
+    .report-box textarea { width: 100%; min-height: 120px; padding: 12px; background: var(--bg-input); border: 1px solid var(--border-secondary); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; resize: vertical; outline: none; }
+    .report-box textarea:focus { border-color: var(--accent); }
+
+    @media (max-width: 640px) {
+        .algo-title-box { padding: 20px; }
+        .algo-title-box h1 { font-size: 22px; }
+        .attachments-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="algo-detail" id="algoDetail">
+    <div style="text-align: center; padding: 60px; color: var(--text-tertiary);">Загрузка...</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ALGO_NUMBER = "{{ algorithm_number }}";
+    let currentAlgorithm = null;
+
+    const TASK_LABELS = { mining: '⛏️ Добыча', building: '🏗️ Стройка', sorting: '📦 Сортировка' };
+    const STATUS_LABELS = {
+        open: 'Открыт', in_progress: 'В работе', review: 'На проверке',
+        completed: 'Завершён', expired: 'Просрочен'
+    };
+    const PARTICIPANT_STATUS = {
+        assigned: 'Назначен', submitted: 'Сдал отчёт',
+        approved: 'Принято', rejected: 'Отклонено'
+    };
+
+    async function loadAlgorithm() {
+        try {
+            const res = await fetch(`/api/algorithms/${ALGO_NUMBER}`);
+            if (!res.ok) {
+                document.getElementById('algoDetail').innerHTML = '<div style="text-align: center; padding: 60px; color: var(--text-muted);"><div style="font-size: 64px;">📭</div><h2>Алгоритм не найден</h2></div>';
+                return;
+            }
+            const data = await res.json();
+            currentAlgorithm = data.data;
+            renderAlgorithm();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderAttachment(att) {
+        if (att.file_type === 'image') {
+            return `
+                <a href="${att.filepath}" target="_blank" class="attachment-card image">
+                    <img src="${att.filepath}" alt="${att.filename}" loading="lazy">
+                </a>
+            `;
+        }
+        return `
+            <a href="${att.filepath}" target="_blank" class="attachment-card file">
+                <span class="icon">📄</span>
+                <span class="filename">${att.filename}</span>
+            </a>
+        `;
+    }
+
+    function renderAlgorithm() {
+        const a = currentAlgorithm;
+        const detail = document.getElementById('algoDetail');
+
+        const deadline = new Date(a.deadline);
+        const now = new Date();
+        const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+
+        // Кнопки
+        let actionsHtml = '';
+        if (a.my_participation) {
+            if (a.my_participation.status === 'assigned') {
+                actionsHtml = `<button class="btn btn-primary" onclick="showReportForm()">📝 Сдать отчёт</button>`;
+            } else if (a.my_participation.status === 'submitted') {
+                actionsHtml = `<div class="badge" style="background: rgba(255,184,74,0.15); color: #ffb84a; border-color: rgba(255,184,74,0.2); padding: 10px 20px;">⏳ Отчёт на проверке</div>`;
+            } else if (a.my_participation.status === 'approved') {
+                actionsHtml = `<div class="badge" style="background: rgba(0,212,170,0.15); color: #00d4aa; border-color: rgba(0,212,170,0.2); padding: 10px 20px;">✅ Работа принята</div>`;
+            }
+        } else if (a.scope === 'public' && a.status === 'open' && a.participants.length < a.max_participants) {
+            actionsHtml = `<button class="btn btn-primary" onclick="joinAlgorithm()">✋ Взять задачу</button>`;
+        } else if (a.participants.length >= a.max_participants && a.scope === 'public') {
+            actionsHtml = `<div class="badge" style="background: rgba(255,107,107,0.1); color: #ff6b6b; border-color: rgba(255,107,107,0.2); padding: 10px 20px;">🚫 Мест нет</div>`;
+        }
+
+        // Вложения
+        const attachmentsHtml = a.attachments.length > 0
+            ? `<div class="attachments-grid">${a.attachments.map(renderAttachment).join('')}</div>`
+            : '';
+
+        // Участники
+        const participantsHtml = a.participants.length === 0
+            ? '<div style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">Нет участников</div>'
+            : a.participants.map(p => {
+                const starsHtml = p.stars ? '⭐'.repeat(p.stars) : '';
+                const canReview = a.can_review && p.status === 'submitted';
+                const reviewBtn = canReview
+                    ? `<button class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;" onclick="showReviewForm(${p.id}, '${p.username}')">Оценить</button>`
+                    : '';
+
+                // Аватар
+                const avatarHtml = p.avatar_url
+                    ? `<div class="avatar"><img src="${p.avatar_url}" alt="${p.username}"></div>`
+                    : `<div class="avatar">👤</div>`;
+
+                // Отчёт
+                const reportHtml = p.report_text
+                    ? `
+                        <div class="report-block" style="grid-column: 1/-1;">
+                            <div class="report-text">📝 ${p.report_text}</div>
+                            ${p.report_attachments.length > 0 ? `
+                                <div class="report-files">
+                                    ${p.report_attachments.map(att => 
+                                        att.file_type === 'image' 
+                                            ? `<a href="${att.filepath}" target="_blank"><img src="${att.filepath}" alt="${att.filename}" loading="lazy"></a>`
+                                            : `<a href="${att.filepath}" target="_blank" style="color: var(--accent); font-size: 12px; padding: 4px 10px; background: var(--bg-hover); border-radius: 6px; text-decoration: none;">📄 ${att.filename}</a>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `
+                    : '';
+
+                return `
+                    <div class="participant-row" style="flex-wrap: wrap;">
+                        ${avatarHtml}
+                        <div class="info">
+                            <div class="username">${p.username} ${starsHtml}</div>
+                            <div class="status">${PARTICIPANT_STATUS[p.status] || p.status}${p.feedback ? ' · ' + p.feedback : ''}</div>
+                        </div>
+                        ${reviewBtn}
+                        ${reportHtml}
+                    </div>
+                `;
+            }).join('');
+
+        detail.innerHTML = `
+            <div class="algo-title-box">
+                <div class="number">${a.number}</div>
+                <h1>${a.title}</h1>
+                <div class="algo-badges">
+                    <span class="algo-badge ${a.task_type}">${TASK_LABELS[a.task_type] || a.task_type}</span>
+                    <span class="algo-badge status-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
+                    <span class="algo-badge scope-${a.scope}">${a.scope === 'public' ? '🌐 Общий' : '🔒 Личный'}</span>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="label">Куратор</div>
+                    <div class="value">👤 ${a.creator.username}</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Дедлайн</div>
+                    <div class="value">${deadline.toLocaleDateString('ru-RU')} ${daysLeft > 0 ? '(' + daysLeft + ' дн.)' : '⚠️'}</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Награда</div>
+                    <div class="value">⭐ ${a.reward_reputation}</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Участники</div>
+                    <div class="value">👥 ${a.participants.length}/${a.max_participants}</div>
+                </div>
+            </div>
+
+            ${a.description ? `<div class="section-title">📄 Описание</div><div class="description">${a.description.replace(/\n/g, '<br>')}</div>` : ''}
+
+            ${attachmentsHtml ? `<div class="section-title">📎 Вложения</div>${attachmentsHtml}` : ''}
+
+            <div class="action-buttons">${actionsHtml}</div>
+
+            <div class="section-title">👥 Участники</div>
+            <div class="participants-list">${participantsHtml}</div>
+
+            <div id="reportForm"></div>
+            <div id="reviewForm"></div>
+        `;
+    }
+
+    function showReportForm() {
+        document.getElementById('reportForm').innerHTML = `
+            <div class="report-box">
+                <h3 style="color: #fff; font-size: 16px; margin-bottom: 12px;">📝 Сдать отчёт</h3>
+                <textarea id="reportText" placeholder="Опишите, что вы сделали..."></textarea>
+                <div style="margin-top: 12px;">
+                    <label style="color: var(--text-tertiary); font-size: 12px; text-transform: uppercase; display: block; margin-bottom: 6px;">Прикрепить фото (опционально)</label>
+                    <input type="file" id="reportFiles" multiple accept="image/*" style="color: #fff; font-size: 13px;">
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="submitReport()">Отправить</button>
+                    <button class="btn btn-outline" onclick="document.getElementById('reportForm').innerHTML=''">Отмена</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function submitReport() {
+        const text = document.getElementById('reportText').value.trim();
+        if (!text) { alert('Введите текст отчёта'); return; }
+
+        const formData = new FormData();
+        formData.append('report_text', text);
+
+        const files = document.getElementById('reportFiles').files;
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+
+        const res = await fetch(`/api/algorithms/${currentAlgorithm.id}/submit`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            alert('Отчёт сдан');
+            await loadAlgorithm();
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.detail || ''));
+        }
+    }
+
+    async function joinAlgorithm() {
+        const res = await fetch(`/api/algorithms/${currentAlgorithm.id}/join`, {
+            method: 'POST'
+        });
+        if (res.ok) {
+            await loadAlgorithm();
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.detail || ''));
+        }
+    }
+
+    function showReviewForm(participantId, username) {
+        document.getElementById('reviewForm').innerHTML = `
+            <div class="report-box" style="margin-top: 20px;">
+                <h3 style="color: #fff; font-size: 16px; margin-bottom: 12px;">⭐ Оценка: ${username}</h3>
+                <div style="margin-bottom: 12px;">
+                    <label style="color: var(--text-tertiary); font-size: 12px; text-transform: uppercase;">Звёзды (1-5)</label>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        ${[1,2,3,4,5].map(i => `<button class="filter-btn" style="padding: 6px 14px; border-radius: 6px; background: var(--bg-input); border: 1px solid var(--border-secondary); color: var(--text-secondary); cursor: pointer; font-family: inherit; font-size: 13px;" onclick="selectStars(${i})" data-star="${i}">${i} ⭐</button>`).join('')}
+                    </div>
+                </div>
+                <textarea id="reviewFeedback" placeholder="Комментарий..." style="min-height: 80px;"></textarea>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="submitReview(${participantId}, true)">✅ Принять</button>
+                    <button class="btn btn-danger" onclick="submitReview(${participantId}, false)">✕ Отклонить</button>
+                    <button class="btn btn-outline" onclick="document.getElementById('reviewForm').innerHTML=''">Отмена</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function selectStars(n) {
+        document.querySelectorAll('[data-star]').forEach(b => {
+            const star = parseInt(b.getAttribute('data-star'));
+            b.style.background = star <= n ? 'var(--accent-bg)' : 'var(--bg-input)';
+            b.style.borderColor = star <= n ? 'var(--accent)' : 'var(--border-secondary)';
+            b.style.color = star <= n ? 'var(--accent)' : 'var(--text-secondary)';
+        });
+        document.getElementById('reviewForm').setAttribute('data-stars', n);
+    }
+
+    async function submitReview(participantId, approve) {
+        const stars = parseInt(document.getElementById('reviewForm').getAttribute('data-stars') || '5');
+        const feedback = document.getElementById('reviewFeedback').value;
+
+        const formData = new FormData();
+        formData.append('stars', stars);
+        formData.append('feedback', feedback);
+        formData.append('approve', approve);
+
+        const res = await fetch(`/api/algorithms/participants/${participantId}/review`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            await loadAlgorithm();
+        } else {
+            const err = await res.json();
+            alert('Ошибка: ' + (err.detail || ''));
+        }
+    }
+
+    loadAlgorithm();
+</script>
+{% endblock %}

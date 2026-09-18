@@ -25,7 +25,7 @@
     /* Акцент — значения подставляются через [data-accent] */
 --accent: #00d4aa;
 --accent-hover: #00e6b8;
---accent-rgb: 0, 212, 170;
+--accent-rgb: #00daa974;
 --accent-bg: rgba(var(--accent-rgb), 0.08);
 --accent-bg-hover: rgba(var(--accent-rgb), 0.15);
 
@@ -52,22 +52,22 @@
 [data-accent="mint"] {
     --accent: #00d4aa;
     --accent-hover: #00e6b8;;
-    --accent-rgb: 0, 212, 170;
+    --accent-rgb: #00daa974;
 }
 [data-accent="blue"] {
     --accent: #4a9eff;
     --accent-hover: #6bb2ff;
-    --accent-rgb: 74, 158, 255;
+    --accent-rgb: #499fff62;
 }
 [data-accent="red"] {
     --accent: #ff4a4a;
     --accent-hover: #ff6b6b;
-    --accent-rgb: 255, 74, 74;
+    --accent-rgb: #ff4b4b55;
 }
 [data-accent="orange"] {
     --accent: #ff9a3c;
     --accent-hover: #ffad5e;
-    --accent-rgb: 255, 154, 60;
+    --accent-rgb: #ff993c5a;
 }
 
 /* ============================================================

@@ -26,3 +26,9 @@ Thumbs.db
 # Database
 *.db
 *.sqlite3
+
+# Algorithm uploads
+static/uploads/algorithms/*
+
+# Algorithm uploads
+static/uploads/algorithms/*

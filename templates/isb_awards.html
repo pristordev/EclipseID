@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}EclipseID · Награды ИСБ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .awards-hero { padding: 40px 0 30px; text-align: center; border-bottom: 1px solid var(--border-primary); margin-bottom: 30px; }
+    .awards-hero h1 { font-size: 42px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .awards-hero h1 span { color: var(--gold); }
+    .awards-hero p { color: var(--text-secondary); max-width: 600px; margin: 0 auto; font-size: 16px; line-height: 1.7; }
+
+    /* Фильтры по редкости */
+    .rarity-filters { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
+    .rarity-btn {
+        padding: 8px 18px; border-radius: 8px; border: 1px solid var(--border-secondary);
+        background: var(--bg-input); color: var(--text-secondary); cursor: pointer;
+        font-family: inherit; font-size: 13px; font-weight: 600;
+        transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .rarity-btn:hover { transform: translateY(-2px); }
+    .rarity-btn .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .rarity-btn[data-rarity="common"]    .dot { background: #9ea3b0; }
+    .rarity-btn[data-rarity="uncommon"]  .dot { background: #5bd16b; }
+    .rarity-btn[data-rarity="rare"]      .dot { background: #4a9eff; }
+    .rarity-btn[data-rarity="epic"]      .dot { background: #b666ff; }
+    .rarity-btn[data-rarity="legendary"] .dot { background: #ffb84a; }
+    .rarity-btn.active { color: #fff; background: var(--bg-hover); }
+    .rarity-btn[data-rarity="common"].active    { border-color: #9ea3b0; }
+    .rarity-btn[data-rarity="uncommon"].active  { border-color: #5bd16b; }
+    .rarity-btn[data-rarity="rare"].active      { border-color: #4a9eff; }
+    .rarity-btn[data-rarity="epic"].active      { border-color: #b666ff; }
+    .rarity-btn[data-rarity="legendary"].active { border-color: #ffb84a; }
+
+    /* Сетка наград */
+    .awards-catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .award-item {
+        background: var(--bg-tertiary); border: 1px solid var(--border-primary);
+        border-radius: 14px; padding: 20px; transition: all 0.25s; cursor: pointer;
+        position: relative; overflow: hidden;
+    }
+    .award-item::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: var(--rarity-color, transparent); opacity: 0.7;
+    }
+    .award-item:hover { border-color: var(--rarity-color, var(--accent)); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .award-item .icon { font-size: 48px; display: block; margin-bottom: 14px; filter: drop-shadow(0 4px 12px var(--rarity-color, transparent)); }
+    .award-item .name { color: #fff; font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+    .award-item .rarity-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--rarity-color, #9ea3b0); margin-bottom: 10px; display: inline-block; }
+    .award-item .desc { color: var(--text-secondary); font-size: 13px; line-height: 1.5; margin-bottom: 14px; min-height: 60px; }
+    .award-item .stats { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border-primary); font-size: 12px; color: var(--text-tertiary); }
+    .award-item .stats .count { color: var(--accent); font-weight: 600; font-size: 14px; }
+
+    /* Редкости */
+    .award-item[data-rarity="common"]    { --rarity-color: #9ea3b0; }
+    .award-item[data-rarity="uncommon"]  { --rarity-color: #5bd16b; }
+    .award-item[data-rarity="rare"]      { --rarity-color: #4a9eff; }
+    .award-item[data-rarity="epic"]      { --rarity-color: #b666ff; }
+    .award-item[data-rarity="legendary"] { --rarity-color: #ffb84a; }
+
+    /* Топ получателей */
+    .top-section { background: var(--bg-tertiary); border: 1px solid var(--border-primary); border-radius: 14px; padding: 24px 28px; margin-top: 20px; }
+    .top-section h2 { color: var(--text-secondary); font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 16px; }
+    .top-list { display: flex; flex-direction: column; gap: 8px; }
+    .top-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid var(--border-primary); transition: all 0.2s; text-decoration: none; color: inherit; }
+    .top-row:hover { border-color: var(--border-hover); transform: translateX(4px); }
+    .top-row .place { font-size: 20px; font-weight: 700; color: var(--text-muted); min-width: 32px; text-align: center; }
+    .top-row .place.gold { color: #ffd700; }
+    .top-row .place.silver { color: #c0c0c0; }
+    .top-row .place.bronze { color: #cd7f32; }
+    .top-row .avatar { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; background: var(--bg-hover); display: flex; align-items: center; justify-content: center; font-size: 18px; overflow: hidden; }
+    .top-row .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .top-row .info { flex: 1; min-width: 0; }
+    .top-row .username { color: #fff; font-size: 14px; font-weight: 600; }
+    .top-row .rank { color: var(--gold); font-size: 12px; margin-top: 2px; }
+    .top-row .count { color: var(--accent); font-size: 16px; font-weight: 700; }
+
+    .empty { text-align: center; padding: 60px 20px; color: var(--text-muted); grid-column: 1/-1; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="awards-hero">
+    <div class="badge" style="background: rgba(212,175,55,0.1); color: var(--gold); border-color: rgba(212,175,55,0.2); margin-bottom: 16px;">
+        🛡️ Имперская служба безопасности
+    </div>
+    <h1>🏅 <span>Награды ИСБ</span></h1>
+    <p>Каталог всех наград Имперской службы безопасности. Знаки отличия за верность, отвагу и заслуги перед Империей.</p>
+</div>
+
+<div class="rarity-filters">
+    <button class="rarity-btn active" data-rarity="all" onclick="setFilter('all')">🎖️ Все</button>
+    <button class="rarity-btn" data-rarity="common" onclick="setFilter('common')"><span class="dot"></span> Обычные</button>
+    <button class="rarity-btn" data-rarity="uncommon" onclick="setFilter('uncommon')"><span class="dot"></span> Необычные</button>
+    <button class="rarity-btn" data-rarity="rare" onclick="setFilter('rare')"><span class="dot"></span> Редкие</button>
+    <button class="rarity-btn" data-rarity="epic" onclick="setFilter('epic')"><span class="dot"></span> Эпические</button>
+    <button class="rarity-btn" data-rarity="legendary" onclick="setFilter('legendary')"><span class="dot"></span> Легендарные</button>
+</div>
+
+<div class="awards-catalog" id="awardsCatalog">
+    <div class="empty">Загрузка...</div>
+</div>
+
+<div class="top-section">
+    <h2>🏆 Топ-10 награждённых</h2>
+    <div class="top-list" id="topList">
+        <div style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">Загрузка...</div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allAwards = [];
+    let currentFilter = 'all';
+
+    const RARITY_LABELS = {
+        common: 'Обычная',
+        uncommon: 'Необычная',
+        rare: 'Редкая',
+        epic: 'Эпическая',
+        legendary: 'Легендарная',
+    };
+
+    async function loadData() {
+        try {
+            const [awardsRes, topRes] = await Promise.all([
+                fetch('/api/admin/isb/awards/public'),
+                fetch('/api/admin/isb/awards/public/top'),
+            ]);
+            allAwards = (await awardsRes.json()).data || [];
+            const top = (await topRes.json()).data || [];
+
+            renderAwards();
+            renderTop(top);
+        } catch (e) {
+            document.getElementById('awardsCatalog').innerHTML = '<div class="empty">⚠️ Ошибка загрузки</div>';
+        }
+    }
+
+    function setFilter(rarity) {
+        currentFilter = rarity;
+        document.querySelectorAll('.rarity-btn').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-rarity') === rarity);
+        });
+        renderAwards();
+    }
+
+    function renderAwards() {
+        const catalog = document.getElementById('awardsCatalog');
+        let filtered = allAwards;
+        if (currentFilter !== 'all') {
+            filtered = allAwards.filter(a => a.rarity === currentFilter);
+        }
+
+        if (filtered.length === 0) {
+            catalog.innerHTML = '<div class="empty">📭 Наград этой редкости пока нет</div>';
+            return;
+        }
+
+        catalog.innerHTML = filtered.map(a => `
+            <div class="award-item" data-rarity="${a.rarity}" onclick="openAwardModal(${a.id})">
+                <span class="icon">${a.icon || '🏅'}</span>
+                <div class="rarity-label">${RARITY_LABELS[a.rarity] || a.rarity}</div>
+                <div class="name">${a.display_name}</div>
+                <div class="desc">${a.description || '—'}</div>
+                <div class="stats">
+                    <span>Выдано раз:</span>
+                    <span class="count">${a.grants_count}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderTop(top) {
+        const container = document.getElementById('topList');
+        if (top.length === 0) {
+            container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; padding: 12px 0;">Пока никто не получал награды</div>';
+            return;
+        }
+
+        const PLACE_CLASSES = ['gold', 'silver', 'bronze'];
+
+        container.innerHTML = top.map((t, i) => {
+            const placeClass = PLACE_CLASSES[i] || '';
+            const avatarHtml = t.avatar_url
+                ? `<div class="avatar"><img src="${t.avatar_url}" alt="${t.username}"></div>`
+                : `<div class="avatar">👤</div>`;
+
+            return `
+                <a href="/p/${t.username}" class="top-row">
+                    <div class="place ${placeClass}">${i + 1}</div>
+                    ${avatarHtml}
+                    <div class="info">
+                        <div class="username">${t.username}</div>
+                        <div class="rank">${t.rank_name} · ${t.service_number}</div>
+                    </div>
+                    <div class="count">${t.awards_count} 🏅</div>
+                </a>
+            `;
+        }).join('');
+    }
+
+    function openAwardModal(awardId) {
+        const a = allAwards.find(x => x.id === awardId);
+        if (!a) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.style.display = 'flex';
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        modal.innerHTML = `
+            <div class="modal" style="max-width: 500px; text-align: center;">
+                <span style="font-size: 96px; display: block; margin-bottom: 16px; filter: drop-shadow(0 4px 20px rgba(255,255,255,0.1));">${a.icon || '🏅'}</span>
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; color: var(--accent); margin-bottom: 12px;">${RARITY_LABELS[a.rarity]}</div>
+                <h2 style="color: #fff; font-size: 26px; margin-bottom: 12px;">${a.display_name}</h2>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.7; margin-bottom: 20px;">${a.description || '—'}</p>
+                <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 12px 18px; display: inline-block;">
+                    <span style="color: var(--text-tertiary); font-size: 12px;">Всего выдано: </span>
+                    <span style="color: var(--accent); font-weight: 700; font-size: 16px;">${a.grants_count}</span>
+                </div>
+                <div style="margin-top: 24px;">
+                    <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Закрыть</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    loadData();
+</script>
+{% endblock %}

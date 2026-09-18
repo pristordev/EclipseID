@@ -190,6 +190,9 @@
         {% if has_admin_access %}
             <a href="/admin" class="btn btn-primary" style="margin: 16px 0 8px;">⚙️ Админ-панель</a>
         {% endif %}
+        {% if isb_employee and isb_employee.is_active %}
+            <a href="/isb/panel" class="btn btn-primary" style="margin: 8px 0;">🛡️ Панель ИСБ</a>
+        {% endif %}
         <a href="/p/{{ user.username }}" class="btn btn-outline" style="margin: 8px 0;">👁 Посмотреть публичный профиль</a>
 
         {# ================= ИНФО ================= #}

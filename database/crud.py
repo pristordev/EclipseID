@@ -267,3 +267,130 @@ async def get_employee_awards(db: AsyncSession, employee_id: int) -> list:
         if award:
             awards.append({"grant": g, "award": award})
     return awards
+
+# =============================================
+#  ИСБ · СЕКТОРА
+# =============================================
+
+async def get_all_sectors(db: AsyncSession) -> list:
+    from database.models import ISBSector
+    result = await db.execute(select(ISBSector).order_by(ISBSector.number))
+    return list(result.scalars().all())
+
+
+async def get_sector(db: AsyncSession, sector_id: int):
+    from database.models import ISBSector
+    result = await db.execute(select(ISBSector).where(ISBSector.id == sector_id))
+    return result.scalar_one_or_none()
+
+
+async def get_sector_by_number(db: AsyncSession, number: int):
+    from database.models import ISBSector
+    result = await db.execute(select(ISBSector).where(ISBSector.number == number))
+    return result.scalar_one_or_none()
+
+
+async def assign_employee_to_sector(
+    db: AsyncSession, sector_id: int, employee_id: int,
+    is_leader: bool = False, notes: str = None
+):
+    from database.models import ISBSectorAssignment
+    # Проверяем, не назначен ли уже
+    existing = await db.execute(
+        select(ISBSectorAssignment).where(
+            ISBSectorAssignment.sector_id == sector_id,
+            ISBSectorAssignment.employee_id == employee_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        return existing.scalar_one()
+
+    assignment = ISBSectorAssignment(
+        sector_id=sector_id,
+        employee_id=employee_id,
+        is_leader=is_leader,
+        notes=notes,
+    )
+    db.add(assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+
+
+async def remove_sector_assignment(db: AsyncSession, assignment_id: int) -> bool:
+    from database.models import ISBSectorAssignment
+    result = await db.execute(
+        select(ISBSectorAssignment).where(ISBSectorAssignment.id == assignment_id)
+    )
+    a = result.scalar_one_or_none()
+    if not a:
+        return False
+    await db.delete(a)
+    await db.commit()
+    return True
+
+
+async def get_sector_assignments(db: AsyncSession, sector_id: int) -> list:
+    from database.models import ISBSectorAssignment
+    result = await db.execute(
+        select(ISBSectorAssignment)
+        .where(ISBSectorAssignment.sector_id == sector_id)
+    )
+    return list(result.scalars().all())
+
+
+# =============================================
+#  ИСБ · ЛОГИ
+# =============================================
+
+async def create_isb_log(
+    db: AsyncSession, message: str, severity: str = "info",
+    category: str = None, actor_id: int = None, sector_id: int = None,
+    meta: str = None
+):
+    from database.models import ISBLog
+    log = ISBLog(
+        message=message,
+        severity=severity,
+        category=category,
+        actor_id=actor_id,
+        sector_id=sector_id,
+        meta=meta,
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return log
+
+
+async def get_isb_logs(
+    db: AsyncSession, limit: int = 100,
+    severity: str = None, category: str = None
+) -> list:
+    from database.models import ISBLog
+    query = select(ISBLog).order_by(ISBLog.created_at.desc()).limit(limit)
+    if severity:
+        query = query.where(ISBLog.severity == severity)
+    if category:
+        query = query.where(ISBLog.category == category)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+async def sync_all_access_levels(db: AsyncSession) -> int:
+    """Синхронизировать уровни доступа по званиям"""
+    from database.models import ISBEmployee
+    from database.isb_access import get_access_level_for_rank
+
+    result = await db.execute(select(ISBEmployee))
+    employees = list(result.scalars().all())
+
+    updated = 0
+    for emp in employees:
+        new_level = get_access_level_for_rank(emp.rank_name)
+        if emp.access_level != new_level:
+            emp.access_level = new_level
+            updated += 1
+
+    if updated:
+        await db.commit()
+    return updated

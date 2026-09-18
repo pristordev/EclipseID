@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИСБ · ПАНЕЛЬ УПРАВЛЕНИЯ</title>
+    <link rel="stylesheet" href="/static/css/isb_panel.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <header class="isb-topbar">
+        <div class="isb-topbar-left">
+            <a href="/isb/panel" class="isb-logo">
+                <div class="isb-logo-mark">ИСБ</div>
+                <span>ПАНЕЛЬ УПРАВЛЕНИЯ</span>
+            </a>
+            <div class="isb-classification">ДСП · УРОВЕНЬ 5</div>
+        </div>
+
+        <div class="isb-topbar-center">
+            <span><span class="isb-status-dot"></span>СИСТЕМА В НОРМЕ</span>
+            <span>СЕАНС: <span id="sessionTime">00:00:00</span></span>
+            <span>УЗЕЛ: ПЛИЕРА-РЕЙМ</span>
+        </div>
+
+        <div class="isb-topbar-right">
+            <div class="isb-time-block">
+                <div class="isb-time-main" id="clockTime">--:--:--</div>
+                <div class="isb-time-date" id="clockDate">--.--.----</div>
+            </div>
+            <a href="/profile" class="isb-operator-badge">
+                ОПЕРАТОР: <strong>{{ current_user.username if current_user else '—' }}</strong>
+            </a>
+            <a href="/logout" class="isb-operator-badge isb-operator-badge-outline">ВЫХОД</a>
+        </div>
+    </header>
+
+    <!-- ОСНОВНАЯ СЕТКА -->
+    <main class="isb-dashboard">
+
+        <!-- СТАТИСТИКА -->
+        <div class="isb-stat-grid">
+            <div class="isb-stat-card">
+                <div class="isb-stat-label">СОТРУДНИКОВ В СТРОЮ</div>
+                <div class="isb-stat-value" id="statEmployees">0 <small>чел.</small></div>
+                <div class="isb-stat-trend">СЕАНС АКТИВЕН</div>
+            </div>
+            <div class="isb-stat-card">
+                <div class="isb-stat-label">АКТИВНЫХ НАГРАД</div>
+                <div class="isb-stat-value" id="statAwards">0 <small>ед.</small></div>
+                <div class="isb-stat-trend">ВСЕГО ВЫДАНО</div>
+            </div>
+            <div class="isb-stat-card">
+                <div class="isb-stat-label">УРОВЕНЬ УГРОЗЫ</div>
+                <div class="isb-stat-value">0 <small>/ 5</small></div>
+                <div class="isb-stat-trend">ОТСУТСТВИЕ</div>
+            </div>
+        </div>
+
+        <!-- СЕКТОРА -->
+        <div class="isb-panel isb-map-panel">
+            <div class="isb-panel-header">
+                <div class="isb-panel-title"><span>01</span> СЕКТОРА РЕЙМА</div>
+                <div class="isb-panel-actions">
+                    <span class="isb-action" id="sectorsTotal">—</span>
+                    <span class="isb-action" onclick="loadSectors()">ОБНОВИТЬ</span>
+                </div>
+            </div>
+            <div class="isb-sectors-grid" id="sectorsGrid">
+                <div class="isb-sectors-loading">ЗАГРУЗКА...</div>
+            </div>
+        </div>
+
+        <!-- ЖУРНАЛ -->
+        <div class="isb-panel isb-log-panel">
+            <div class="isb-panel-header">
+                <div class="isb-panel-title"><span>02</span> ЖУРНАЛ СОБЫТИЙ</div>
+                <div class="isb-panel-actions">
+                    <span class="isb-action" onclick="loadLogs()">ОБНОВИТЬ</span>
+                </div>
+            </div>
+            <div class="isb-log-list" id="logList">
+                <div class="isb-log-entry">
+                    <span class="isb-log-time">--:--:--</span>
+                    <span class="isb-log-severity info">ИНФО</span>
+                    <span class="isb-log-message">ОЖИДАНИЕ СОБЫТИЙ...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ГРАФИКИ -->
+        <div class="isb-panel isb-graphs-panel" id="graphsPanel">
+            <div class="isb-panel-header">
+                <div class="isb-panel-title"><span>03</span> АНАЛИТИКА</div>
+                <div class="isb-panel-actions">
+                    <span class="isb-action">ОБНОВЛЕНО: <span id="graphsUpdate">--:--</span></span>
+                </div>
+            </div>
+            <div class="isb-graphs-grid">
+                <div class="isb-graph-box">
+                    <div class="isb-graph-title">СОТРУДНИКИ ПО СЕКТОРАМ</div>
+                    <canvas id="graphSectors"></canvas>
+                </div>
+                <div class="isb-graph-box">
+                    <div class="isb-graph-title">ЛОГИ ЗА 24 ЧАСА</div>
+                    <canvas id="graphLogs"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- УПРАВЛЕНИЕ СОСТАВОМ -->
+        <div class="isb-panel isb-admin-panel" id="adminPanel">
+            <div class="isb-panel-header">
+                <div class="isb-panel-title"><span>04</span> УПРАВЛЕНИЕ СОСТАВОМ</div>
+                <div class="isb-panel-actions">
+                    <span class="isb-action" onclick="openHireModal()">ПРИНЯТЬ</span>
+                    <span class="isb-action" onclick="loadEmployees()">ОБНОВИТЬ</span>
+                </div>
+            </div>
+            <div class="isb-employees-table" id="employeesTable">
+                <div class="isb-sectors-loading">ЗАГРУЗКА...</div>
+            </div>
+        </div>
+
+        <!-- СИСТЕМЫ -->
+        <div class="isb-panel isb-systems-panel">
+            <div class="isb-panel-header">
+                <div class="isb-panel-title"><span>05</span> СОСТОЯНИЕ СИСТЕМ</div>
+                <div class="isb-panel-actions">
+                    <span class="isb-action" id="lastUpdate">ОБНОВЛЕНО: --:--:--</span>
+                </div>
+            </div>
+            <div class="isb-systems-grid">
+                <div class="isb-system-item">
+                    <span class="isb-system-name">БАЗА ДАННЫХ</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysDB"></span>
+                        <span id="sysDBText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+                <div class="isb-system-item">
+                    <span class="isb-system-name">API СЕРВЕР</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysAPI"></span>
+                        <span id="sysAPIText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+                <div class="isb-system-item">
+                    <span class="isb-system-name">АВТОРИЗАЦИЯ</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysAuth"></span>
+                        <span id="sysAuthText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+                <div class="isb-system-item">
+                    <span class="isb-system-name">ПОИСК</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysSearch"></span>
+                        <span id="sysSearchText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+                <div class="isb-system-item">
+                    <span class="isb-system-name">АЛГОРИТМЫ</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysAlgo"></span>
+                        <span id="sysAlgoText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+                <div class="isb-system-item">
+                    <span class="isb-system-name">СОЕДИНЕНИЕ</span>
+                    <div class="isb-system-status">
+                        <span class="isb-indicator" id="sysConn"></span>
+                        <span id="sysConnText">ПРОВЕРКА...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ПОДВАЛ -->
+    <footer class="isb-footer">
+        <div class="isb-footer-left">
+            <span>© 2027 ECLIPSEID · ИСБ</span>
+            <span>ДОКУМЕНТ: ДСП-ИСБ-2027-001</span>
+        </div>
+        <div class="isb-footer-right">
+            <a href="/">ГЛАВНАЯ ИМПЕРИИ</a>
+            <a href="/isb/awards">НАГРАДЫ</a>
+            <a href="/profile">ПРОФИЛЬ</a>
+        </div>
+    </footer>
+
+    <script src="/static/js/isb_panel.js"></script>
+</body>
+</html>
